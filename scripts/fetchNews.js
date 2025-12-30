@@ -17,13 +17,10 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // 뉴스 카테고리별 RSS 피드 - URL 인코딩된 주소 사용
 const RSS_FEEDS = {
   '경제': 'https://www.mk.co.kr/rss/30100041/',  // 매일경제 경제
-  '과학기술': 'https://www.etnews.com/rss.xml',  // 전자신문 IT
-  '스포츠': 'https://sports.news.naver.com/rss/index.nhn',  // 네이버 스포츠
-  '게임': 'http://www.inven.co.kr/rss/webzine.xml',  // 인벤 게임
-  '세계경제': 'https://www.hankyung.com/feed/economy',  // 한국경제
+  '과학기술': 'http://rss.etnews.com/03.xml',  // 전자신문 IT
+  '세계경제': 'https://rss.hankyung.com/economy.xml',  // 한국경제
   '부동산': 'https://land.naver.com/news/rss.naver',  // 네이버 부동산
   '날씨': 'https://www.weather.go.kr/w/rss/rss-weather.do',  // 기상청 RSS
-  '과학': 'https://www.sciencetimes.co.kr/rss/S0.xml'  // 사이언스타임즈
 };
 
 // 제외할 키워드
