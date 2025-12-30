@@ -18,7 +18,19 @@ const parser = new Parser({
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// 실제로 작동하는 RSS 피드 (2024-2025년 검증됨)
+// 시도할 모델 목록 (우선순위 순)
+const MODELS_TO_TRY = [
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro-latest', 
+  'gemini-1.5-pro',
+  'gemini-pro',
+  'gemini-1.0-pro'
+];
+
+let WORKING_MODEL = null; // 작동하는 모델 저장
+
+// 실제로 작동하는 RSS 피드
 const RSS_FEEDS = {
   '경제': 'https://www.mk.co.kr/rss/30100041/',
   '세계경제': 'https://www.hankyung.com/feed/economy',
@@ -43,14 +55,12 @@ function filterNews(item) {
   const description = item.contentSnippet || item.description || '';
   const content = `${title} ${description}`.toLowerCase();
   
-  // 제외 키워드 체크
   for (const keyword of EXCLUDE_KEYWORDS) {
     if (content.includes(keyword.toLowerCase())) {
       return false;
     }
   }
   
-  // 너무 짧은 내용 제외
   if (title.length < 10) {
     return false;
   }
@@ -58,13 +68,58 @@ function filterNews(item) {
   return true;
 }
 
+// 작동하는 모델 찾기
+async function findWorkingModel() {
+  console.log('🔍 사용 가능한 모델 찾는 중...\n');
+  
+  for (const modelName of MODELS_TO_TRY) {
+    try {
+      console.log(`   시도: ${modelName}...`);
+      
+      const model = genAI.getGenerativeModel({ 
+        model: modelName,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        }
+      });
+      
+      // 간단한 테스트
+      const testPrompt = '{"test": "ok"}라고만 답변해주세요.';
+      const result = await model.generateContent(testPrompt);
+      await result.response;
+      
+      console.log(`   ✅ ${modelName} 작동 확인!\n`);
+      return modelName;
+      
+    } catch (error) {
+      console.log(`   ❌ ${modelName} 실패: ${error.message.substring(0, 80)}...`);
+    }
+  }
+  
+  return null;
+}
+
 // AI로 13세 눈높이에 맞게 재작성
-async function rewriteForKids(article, retries = 3) {
+async function rewriteForKids(article, retries = 2) {
+  // 첫 실행 시 작동하는 모델 찾기
+  if (!WORKING_MODEL) {
+    WORKING_MODEL = await findWorkingModel();
+    
+    if (!WORKING_MODEL) {
+      console.error('\n❌ 사용 가능한 모델을 찾을 수 없습니다!');
+      console.error('💡 다음을 시도해보세요:');
+      console.error('   1. Google AI Studio에서 새 API 키 발급');
+      console.error('   2. https://aistudio.google.com/app/apikey');
+      console.error('   3. 기존 키 삭제 후 "Create API key in new project" 선택\n');
+      process.exit(1);
+    }
+  }
+  
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      // gemini-1.5-flash 모델 사용
       const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
+        model: WORKING_MODEL,
         generationConfig: {
           temperature: 0.7,
           topK: 40,
@@ -127,30 +182,11 @@ async function rewriteForKids(article, retries = 3) {
           continue;
         }
       } else {
-        console.log(`   ⚠️  JSON 형식을 찾을 수 없음. 응답: ${text.substring(0, 100)}...`);
+        console.log(`   ⚠️  JSON 형식을 찾을 수 없음`);
       }
       
     } catch (error) {
-      console.error(`   ⚠️  AI 재작성 시도 ${attempt + 1}/${retries} 실패:`, error.message);
-      
-      // API 키 오류인 경우 즉시 종료
-      if (error.message.includes('API_KEY_INVALID') || 
-          error.message.includes('API key not valid') ||
-          error.message.includes('invalid')) {
-        console.error('\n❌ API 키 오류! GEMINI_API_KEY를 확인하세요.');
-        console.error('💡 https://aistudio.google.com/app/apikey 에서 키를 발급받으세요.\n');
-        process.exit(1);
-      }
-      
-      // 모델 오류인 경우
-      if (error.message.includes('not found for API version') || 
-          error.message.includes('404') ||
-          error.message.includes('not supported')) {
-        console.error('\n❌ 모델 오류! gemini-1.5-flash 모델을 사용할 수 없습니다.');
-        console.error('💡 API 키가 최신 SDK와 호환되는지 확인하세요.');
-        console.error('💡 또는 Google AI Studio에서 새 API 키를 발급받으세요.\n');
-        process.exit(1);
-      }
+      console.error(`   ⚠️  재작성 시도 ${attempt + 1}/${retries} 실패:`, error.message.substring(0, 100));
       
       if (attempt < retries - 1) {
         console.log(`   ⏳ 3초 후 재시도...`);
@@ -189,12 +225,9 @@ async function fetchNews() {
     process.exit(1);
   }
   
-  // API 키 유효성 간단 체크
   const apiKey = process.env.GEMINI_API_KEY;
   console.log(`🔑 API Key: ${apiKey.substring(0, 8)}...${apiKey.slice(-4)}`);
-  console.log('🤖 사용 모델: gemini-1.5-flash');
-  console.log('📦 SDK: @google/generative-ai v0.21.0+');
-  console.log('🌐 API Version: v1beta (default)\n');
+  console.log('📦 SDK: @google/generative-ai v0.21.0+\n');
   
   const allArticles = [];
   let successCount = 0;
@@ -228,7 +261,7 @@ async function fetchNews() {
           console.log(`   ❌ AI 변환 최종 실패`);
         }
         
-        // API 레이트 리밋 고려 (안전 마진)
+        // API 레이트 리밋 고려
         console.log(`   ⏱️  다음 요청까지 5초 대기...`);
         await new Promise(resolve => setTimeout(resolve, 5000));
       }
@@ -252,6 +285,7 @@ async function fetchNews() {
   console.log(`   ✅ 성공: ${successCount}개`);
   console.log(`   ❌ 실패: ${failCount}개`);
   console.log(`   📰 최종 선택: ${selectedArticles.length}개`);
+  console.log(`   🤖 사용된 모델: ${WORKING_MODEL}`);
   console.log('='.repeat(60));
   
   // 데이터 저장
@@ -265,8 +299,8 @@ async function fetchNews() {
     totalCount: selectedArticles.length,
     metadata: {
       sdkVersion: '@google/generative-ai v0.21.0+',
-      model: 'gemini-1.5-flash',
-      apiVersion: 'v1beta'
+      model: WORKING_MODEL,
+      attemptedModels: MODELS_TO_TRY
     }
   };
   
@@ -283,11 +317,10 @@ async function fetchNews() {
   if (selectedArticles.length === 0) {
     console.warn('\n⚠️  경고: 수집된 뉴스가 0개입니다!');
     console.warn('💡 다음을 확인하세요:');
-    console.warn('   1. GEMINI_API_KEY가 올바른지');
-    console.warn('   2. API 키가 활성화되어 있는지');
-    console.warn('   3. Gemini API 할당량이 남아있는지 (무료: 60회/분)');
-    console.warn('   4. 인터넷 연결 상태');
-    console.warn('   5. https://aistudio.google.com/app/apikey 에서 새 키 발급\n');
+    console.warn('   1. https://aistudio.google.com/app/apikey 에서 새 API 키 발급');
+    console.warn('   2. 기존 키 삭제 후 "Create API key in new project" 선택');
+    console.warn('   3. API 키 활성화 확인');
+    console.warn('   4. Gemini API 할당량 확인\n');
   }
   
   return newsData;
