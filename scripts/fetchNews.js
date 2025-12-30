@@ -57,7 +57,7 @@ function filterNews(item) {
 // AI로 13세 눈높이에 맞게 재작성
 async function rewriteForKids(article) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flas" });
     
     const prompt = `당신은 13세 청소년을 위한 뉴스 작가입니다. 다음 뉴스를 13세가 이해하기 쉽고 흥미롭게 재작성해주세요.
 
