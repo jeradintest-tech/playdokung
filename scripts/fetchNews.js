@@ -8,36 +8,22 @@ dotenv.config();
 
 const parser = new Parser({
   customFields: {
-    item: ['description', 'pubDate', 'link', 'content:encoded']
-  },
-  timeout: 15000,
-  headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    item: ['description', 'pubDate', 'link']
   }
 });
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// 시도할 모델 목록 (우선순위 순)
-const MODELS_TO_TRY = [
-  'gemini-1.5-flash-latest',
-  'gemini-1.5-flash',
-  'gemini-pro',
-  'gemini-1.0-pro'
-];
-
-let WORKING_MODEL = null; // 작동하는 모델 저장
-
-// 실제로 작동하는 RSS 피드
+// 뉴스 카테고리별 RSS 피드 - URL 인코딩된 주소 사용
 const RSS_FEEDS = {
-  '경제': 'https://www.mk.co.kr/rss/30100041/',
-  '세계경제': 'https://www.hankyung.com/feed/economy',
-  '사회': 'http://rss.nocutnews.co.kr/NocutSocial.xml',
-  '정치': 'http://www.khan.co.kr/rss/rssdata/politic.xml',
-  'IT과학': 'http://www.khan.co.kr/rss/rssdata/itnews.xml',
-  '스포츠': 'http://www.khan.co.kr/rss/rssdata/sports.xml',
-  '문화': 'http://rss.donga.com/culture.xml',
-  '생활': 'http://rss.hankooki.com/news/hk_life.xml'
+  '경제': 'https://www.mk.co.kr/rss/30100041/',  // 매일경제 경제
+  '과학기술': 'https://www.etnews.com/rss.xml',  // 전자신문 IT
+  '스포츠': 'https://sports.news.naver.com/rss/index.nhn',  // 네이버 스포츠
+  '게임': 'http://www.inven.co.kr/rss/webzine.xml',  // 인벤 게임
+  '세계경제': 'https://www.hankyung.com/feed/economy',  // 한국경제
+  '부동산': 'https://land.naver.com/news/rss.naver',  // 네이버 부동산
+  '날씨': 'https://www.weather.go.kr/w/rss/rss-weather.do',  // 기상청 RSS
+  '과학': 'https://www.sciencetimes.co.kr/rss/S0.xml'  // 사이언스타임즈
 };
 
 // 제외할 키워드
@@ -53,12 +39,14 @@ function filterNews(item) {
   const description = item.contentSnippet || item.description || '';
   const content = `${title} ${description}`.toLowerCase();
   
+  // 제외 키워드 체크
   for (const keyword of EXCLUDE_KEYWORDS) {
     if (content.includes(keyword.toLowerCase())) {
       return false;
     }
   }
   
+  // 너무 짧은 내용 제외
   if (title.length < 10) {
     return false;
   }
@@ -66,67 +54,12 @@ function filterNews(item) {
   return true;
 }
 
-// 작동하는 모델 찾기
-async function findWorkingModel() {
-  console.log('🔍 사용 가능한 모델 찾는 중...\n');
-  
-  for (const modelName of MODELS_TO_TRY) {
-    try {
-      console.log(`   시도: ${modelName}...`);
-      
-      const model = genAI.getGenerativeModel({ 
-        model: modelName,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1024,
-        }
-      });
-      
-      // 간단한 테스트
-      const testPrompt = '{"test": "ok"}라고만 답변해주세요.';
-      const result = await model.generateContent(testPrompt);
-      await result.response;
-      
-      console.log(`   ✅ ${modelName} 작동 확인!\n`);
-      return modelName;
-      
-    } catch (error) {
-      console.log(`   ❌ ${modelName} 실패: ${error.message.substring(0, 80)}...`);
-    }
-  }
-  
-  return null;
-}
-
 // AI로 13세 눈높이에 맞게 재작성
-async function rewriteForKids(article, retries = 2) {
-  // 첫 실행 시 작동하는 모델 찾기
-  if (!WORKING_MODEL) {
-    WORKING_MODEL = await findWorkingModel();
+async function rewriteForKids(article) {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     
-    if (!WORKING_MODEL) {
-      console.error('\n❌ 사용 가능한 모델을 찾을 수 없습니다!');
-      console.error('💡 다음을 시도해보세요:');
-      console.error('   1. Google AI Studio에서 새 API 키 발급');
-      console.error('   2. https://aistudio.google.com/app/apikey');
-      console.error('   3. 기존 키 삭제 후 "Create API key in new project" 선택\n');
-      process.exit(1);
-    }
-  }
-  
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      const model = genAI.getGenerativeModel({ 
-        model: WORKING_MODEL,
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        }
-      });
-      
-      const prompt = `당신은 13세 청소년을 위한 뉴스 작가입니다. 다음 뉴스를 13세가 이해하기 쉽고 흥미롭게 재작성해주세요.
+    const prompt = `당신은 13세 청소년을 위한 뉴스 작가입니다. 다음 뉴스를 13세가 이해하기 쉽고 흥미롭게 재작성해주세요.
 
 원본 뉴스:
 제목: ${article.title}
@@ -140,7 +73,7 @@ async function rewriteForKids(article, retries = 2) {
 5. 긍정적이고 교육적인 톤으로 작성
 6. 부정적이거나 폭력적인 내용은 순화하여 표현
 
-반드시 JSON 형식으로만 답변하고, 다른 설명은 추가하지 마세요:
+JSON 형식으로만 답변해주세요 (다른 설명 없이):
 {
   "title": "재작성된 제목",
   "summary": "재작성된 본문",
@@ -148,127 +81,65 @@ async function rewriteForKids(article, retries = 2) {
   "readingTime": "2"
 }`;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      let text = response.text();
-      
-      // 백틱이나 마크다운 코드 블록 제거
-      text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-      
-      // JSON 파싱 시도
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          const parsed = JSON.parse(jsonMatch[0]);
-          
-          // 필수 필드 확인
-          if (!parsed.title || !parsed.summary || !parsed.category) {
-            console.log(`   ⚠️  필수 필드 누락`);
-            continue;
-          }
-          
-          return {
-            title: parsed.title,
-            summary: parsed.summary,
-            category: parsed.category,
-            readingTime: parsed.readingTime || "2",
-            originalLink: article.link,
-            pubDate: article.pubDate || article.isoDate || new Date().toISOString()
-          };
-        } catch (parseError) {
-          console.log(`   ⚠️  JSON 파싱 오류: ${parseError.message}`);
-          continue;
-        }
-      } else {
-        console.log(`   ⚠️  JSON 형식을 찾을 수 없음`);
-      }
-      
-    } catch (error) {
-      console.error(`   ⚠️  재작성 시도 ${attempt + 1}/${retries} 실패:`, error.message.substring(0, 100));
-      
-      if (attempt < retries - 1) {
-        console.log(`   ⏳ 3초 후 재시도...`);
-        await new Promise(resolve => setTimeout(resolve, 3000));
-      }
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    let text = response.text();
+    
+    // 백틱이나 마크다운 코드 블록 제거
+    text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
+    // JSON 파싱
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        ...parsed,
+        originalLink: article.link,
+        pubDate: article.pubDate || article.isoDate || new Date().toISOString()
+      };
     }
-  }
-  
-  return null;
-}
-
-// RSS 피드 가져오기
-async function fetchFeed(feedUrl, retries = 2) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const feed = await parser.parseURL(feedUrl);
-      return feed;
-    } catch (error) {
-      console.error(`   ⚠️  피드 가져오기 시도 ${i + 1}/${retries} 실패: ${error.message}`);
-      if (i === retries - 1) throw error;
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    }
+    
+    return null;
+  } catch (error) {
+    console.error('AI 재작성 오류:', error.message);
+    return null;
   }
 }
 
 // 메인 함수
 async function fetchNews() {
   console.log('📰 뉴스 수집 시작...');
-  console.log(`⏰ 시작 시간: ${new Date().toLocaleString('ko-KR')}\n`);
-  
-  // API 키 확인
-  if (!process.env.GEMINI_API_KEY) {
-    console.error('❌ GEMINI_API_KEY가 설정되지 않았습니다!');
-    console.error('💡 .env 파일에 GEMINI_API_KEY=your_api_key를 추가하세요.');
-    console.error('💡 https://aistudio.google.com/app/apikey 에서 키를 발급받으세요.\n');
-    process.exit(1);
-  }
-  
-  const apiKey = process.env.GEMINI_API_KEY;
-  console.log(`🔑 API Key: ${apiKey.substring(0, 8)}...${apiKey.slice(-4)}`);
-  console.log('📦 SDK: @google/generative-ai v0.21.0+\n');
   
   const allArticles = [];
-  let successCount = 0;
-  let failCount = 0;
   
   // 각 카테고리별 RSS 피드에서 뉴스 수집
   for (const [category, feedUrl] of Object.entries(RSS_FEEDS)) {
     try {
-      console.log(`📡 ${category} 뉴스 가져오는 중...`);
-      console.log(`   URL: ${feedUrl}`);
+      console.log(`📡 ${category} 뉴스 가져오는 중... (${feedUrl})`);
       
-      const feed = await fetchFeed(feedUrl);
-      console.log(`   ✓ 수집된 항목: ${feed.items.length}개`);
+      const feed = await parser.parseURL(feedUrl);
+      console.log(`   수집된 항목: ${feed.items.length}개`);
       
-      // 최대 2개씩만 수집
+      // 최대 2개씩만 수집 (총 13개 목표)
       const items = feed.items.slice(0, 2).filter(filterNews);
-      console.log(`   ✓ 필터링 후: ${items.length}개`);
+      console.log(`   필터링 후: ${items.length}개`);
       
       for (const item of items) {
-        const titlePreview = item.title?.substring(0, 40) || '제목 없음';
-        console.log(`   🤖 AI 변환 중: ${titlePreview}...`);
-        
+        console.log(`   🤖 AI 변환 중: ${item.title?.substring(0, 30)}...`);
         const rewritten = await rewriteForKids(item);
         
         if (rewritten) {
           allArticles.push(rewritten);
-          successCount++;
           console.log(`   ✅ ${rewritten.title}`);
         } else {
-          failCount++;
-          console.log(`   ❌ AI 변환 최종 실패`);
+          console.log(`   ⚠️  AI 변환 실패`);
         }
         
-        // API 레이트 리밋 고려
-        console.log(`   ⏱️  다음 요청까지 5초 대기...`);
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // API 레이트 리밋 고려 (Gemini 무료: 분당 60회)
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
-      
-      console.log('');
     } catch (error) {
-      failCount++;
       console.error(`❌ ${category} 피드 오류:`, error.message);
-      console.log('');
     }
   }
   
@@ -278,13 +149,7 @@ async function fetchNews() {
   // 최대 13개로 제한
   const selectedArticles = allArticles.slice(0, 13);
   
-  console.log('='.repeat(60));
-  console.log(`📊 수집 완료 통계:`);
-  console.log(`   ✅ 성공: ${successCount}개`);
-  console.log(`   ❌ 실패: ${failCount}개`);
-  console.log(`   📰 최종 선택: ${selectedArticles.length}개`);
-  console.log(`   🤖 사용된 모델: ${WORKING_MODEL}`);
-  console.log('='.repeat(60));
+  console.log(`\n📊 수집 완료: ${selectedArticles.length}개`);
   
   // 데이터 저장
   const dataDir = path.join(process.cwd(), 'src');
@@ -292,14 +157,8 @@ async function fetchNews() {
   
   const newsData = {
     generatedAt: new Date().toISOString(),
-    generatedAtKST: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }),
     articles: selectedArticles,
-    totalCount: selectedArticles.length,
-    metadata: {
-      sdkVersion: '@google/generative-ai v0.21.0+',
-      model: WORKING_MODEL,
-      attemptedModels: MODELS_TO_TRY
-    }
+    totalCount: selectedArticles.length
   };
   
   await fs.writeFile(
@@ -308,25 +167,11 @@ async function fetchNews() {
     'utf-8'
   );
   
-  console.log(`\n✅ news-data.json 저장 완료!`);
+  console.log(`✅ news-data.json 저장 완료!`);
   console.log(`📁 위치: src/news-data.json`);
-  console.log(`⏰ 완료 시간: ${new Date().toLocaleString('ko-KR')}`);
-  
-  if (selectedArticles.length === 0) {
-    console.warn('\n⚠️  경고: 수집된 뉴스가 0개입니다!');
-    console.warn('💡 다음을 확인하세요:');
-    console.warn('   1. https://aistudio.google.com/app/apikey 에서 새 API 키 발급');
-    console.warn('   2. 기존 키 삭제 후 "Create API key in new project" 선택');
-    console.warn('   3. API 키 활성화 확인');
-    console.warn('   4. Gemini API 할당량 확인\n');
-  }
   
   return newsData;
 }
 
 // 실행
-fetchNews().catch(error => {
-  console.error('\n💥 치명적 오류 발생:', error);
-  console.error('스택 트레이스:', error.stack);
-  process.exit(1);
-});
+fetchNews().catch(console.error);
