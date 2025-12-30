@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="13세를 위한 경제 신문 - 플레이도경">
+  <title>플레이도경 - 13세를 위한 경제 신문</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --primary-color: #0078D4;
+      --secondary-color: #005A9E;
+      --bg-light: #F3F3F3;
+      --bg-white: #FFFFFF;
+      --text-primary: #1F1F1F;
+      --text-secondary: #605E5C;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+      --border-radius: 8px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", 
+                   "Apple SD Gothic Neo", sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    /* Header */
+    header {
+      background: var(--bg-white);
+      border-radius: var(--border-radius);
+      padding: 30px 40px;
+      margin-bottom: 30px;
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(10px);
+    }
+    
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .logo-icon {
+      font-size: 48px;
+      animation: bounce 2s infinite;
+    }
+    
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      color: var(--primary-color);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    
+    .date-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .date {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      padding: 8px 16px;
+      background: var(--bg-light);
+      border-radius: 20px;
+    }
+    
+    .stats {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .stat-badge {
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    
+    .tagline {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      text-align: center;
+      padding-top: 15px;
+      border-top: 2px solid var(--bg-light);
+    }
+    
+    /* Filter Buttons */
+    .filter-container {
+      background: var(--bg-white);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: var(--shadow-md);
+      overflow-x: auto;
+    }
+    
+    .filter-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .filter-btn {
+      padding: 10px 20px;
+      border: 2px solid var(--bg-light);
+      background: white;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    
+    .filter-btn:hover {
+      border-color: var(--primary-color);
+      background: var(--primary-color);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .filter-btn.active {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      color: white;
+    }
+    
+    /* News Grid */
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 25px;
+      margin-bottom: 40px;
+    }
+    
+    .news-card {
+      background: var(--bg-white);
+      border-radius: var(--border-radius);
+      padding: 25px;
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .news-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+    
+    .news-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .news-card:hover::before {
+      transform: scaleX(1);
+    }
+    
+    .news-category {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 15px;
+      align-self: flex-start;
+    }
+    
+    .category-icon {
+      font-size: 1.1rem;
+    }
+    
+    .news-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+    
+    .news-summary {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 20px;
+      flex-grow: 1;
+    }
+    
+    .news-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 15px;
+      border-top: 1px solid var(--bg-light);
+    }
+    
+    .reading-time {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    
+    .read-more {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+    
+    .read-more:hover {
+      color: var(--secondary-color);
+      transform: translateX(3px);
+    }
+    
+    /* Footer */
+    footer {
+      background: var(--bg-white);
+      border-radius: var(--border-radius);
+      padding: 30px;
+      text-align: center;
+      box-shadow: var(--shadow-md);
+      margin-top: 40px;
+    }
+    
+    footer p {
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+    
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+    
+    .footer-links a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 500;
+      transition: var(--transition);
+    }
+    
+    .footer-links a:hover {
+      color: var(--secondary-color);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      
+      header {
+        padding: 20px;
+      }
+      
+      h1 {
+        font-size: 1.8rem;
+      }
+      
+      .logo-icon {
+        font-size: 36px;
+      }
+      
+      .news-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .header-top {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .date-info {
+        justify-content: center;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      .news-card {
+        padding: 20px;
+      }
+      
+      .news-title {
+        font-size: 1.15rem;
+      }
+    }
+    
+    /* Loading Animation */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 40px;
+      color: white;
+      font-size: 1.2rem;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-top">
+        <div class="logo">
+          <span class="logo-icon">📰</span>
+          <h1>플레이도경</h1>
+        </div>
+        <div class="date-info">
+          <span class="date">📅 2025년 12월 30일 화요일</span>
+          <div class="stats">
+            <span class="stat-badge">📚 13개의 뉴스</span>
+            <span class="stat-badge">⏱️ 29분 분량</span>
+          </div>
+        </div>
+      </div>
+      <p class="tagline">💡 13세를 위한 경제와 세상 이야기</p>
+    </header>
+    
+    <div class="filter-container">
+      <div class="filter-buttons">
+        <button class="filter-btn active" data-filter="all">전체 보기</button>
+        <button class="filter-btn" data-filter="용돈">💰 용돈</button><button class="filter-btn" data-filter="저축팁">🏦 저축팁</button><button class="filter-btn" data-filter="취미">🎨 취미</button><button class="filter-btn" data-filter="새로운제품기술">📱 새로운제품기술</button><button class="filter-btn" data-filter="과학">🔬 과학</button><button class="filter-btn" data-filter="날씨">🌤️ 날씨</button><button class="filter-btn" data-filter="경제">📊 경제</button><button class="filter-btn" data-filter="세계경제">🌍 세계경제</button><button class="filter-btn" data-filter="부동산">🏠 부동산</button><button class="filter-btn" data-filter="스포츠">⚽ 스포츠</button><button class="filter-btn" data-filter="게임">🎮 게임</button><button class="filter-btn" data-filter="테크">💻 테크</button><button class="filter-btn" data-filter="지식">📚 지식</button>
+      </div>
+    </div>
+    
+    <div class="news-grid" id="newsGrid">
+      
+      <article class="news-card" data-category="용돈">
+        <div class="news-category" style="background: #FF6B6B">
+          <span class="category-icon">💰</span>
+          <span class="category-name">용돈</span>
+        </div>
+        <h2 class="news-title">💰 용돈 관리 앱이 인기! 청소년들이 직접 저축하는 시대</h2>
+        <p class="news-summary">요즘 청소년들 사이에서 용돈 관리 앱이 인기를 끌고 있어요. 매달 받는 용돈을 앱에 기록하고, 목표 금액을 정해서 저축하는 거죠. 마치 게임처럼 레벨이 올라가면서 저축 습관을 기를 수 있대요. 한 중학생은 "1년 동안 모은 돈으로 꿈에 그리던 게임 콘솔을 샀어요"라고 말했어요.</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 2분</span>
+          <a href="https://news.example.com/1" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+      <article class="news-card" data-category="저축팁">
+        <div class="news-category" style="background: #4ECDC4">
+          <span class="category-icon">🏦</span>
+          <span class="category-name">저축팁</span>
+        </div>
+        <h2 class="news-title">🏦 은행 적금, 청소년도 할 수 있다! 이자는 얼마나 받을까?</h2>
+        <p class="news-summary">만 14세 이상이면 부모님 동의 없이도 적금을 들 수 있다는 사실, 알고 있나요? 매달 1만원씩 1년간 모으면 약 12만 2천원을 받을 수 있어요. 이자율이 2%라고 가정했을 때예요. 작은 돈이지만 꾸준히 모으는 습관을 기르는 게 중요하답니다!</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 2분</span>
+          <a href="https://news.example.com/2" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+      <article class="news-card" data-category="취미">
+        <div class="news-category" style="background: #95E1D3">
+          <span class="category-icon">🎨</span>
+          <span class="category-name">취미</span>
+        </div>
+        <h2 class="news-title">🎨 레고로 건축 디자이너 꿈꾸기! 취미가 직업이 되다</h2>
+        <p class="news-summary">레고 조립이 취미인 한 청소년이 자신이 만든 작품들을 SNS에 올렸더니 큰 인기를 얻었어요. 이제는 건축 디자이너가 되기 위해 공부하고 있대요. 취미로 시작한 일이 미래의 직업으로 이어질 수 있다는 걸 보여주는 멋진 사례네요!</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 2분</span>
+          <a href="https://news.example.com/3" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+      <article class="news-card" data-category="새로운제품기술">
+        <div class="news-category" style="background: #5C7CFA">
+          <span class="category-icon">📱</span>
+          <span class="category-name">새로운제품기술</span>
+        </div>
+        <h2 class="news-title">📱 애플, 접히는 아이폰 개발 중! 2026년 출시 예정</h2>
+        <p class="news-summary">애플이 마침내 폴더블(접히는) 아이폰을 만들고 있대요! 삼성의 갤럭시 폴드처럼 화면을 접을 수 있는 거죠. 펼치면 태블릿처럼 크고, 접으면 주머니에 쏙 들어가는 크기가 돼요. 아직 2년 정도 기다려야 하지만, 정말 기대되는 소식이네요!</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 2분</span>
+          <a href="https://news.example.com/4" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+      <article class="news-card" data-category="과학">
+        <div class="news-category" style="background: #845EC2">
+          <span class="category-icon">🔬</span>
+          <span class="category-name">과학</span>
+        </div>
+        <h2 class="news-title">🔬 우주에서 키운 상추, 지구보다 영양분이 더 많다!</h2>
+        <p class="news-summary">국제우주정거장에서 키운 상추를 분석했더니 지구에서 키운 것보다 비타민 C가 더 많았대요! 무중력 상태에서 식물이 스트레스를 받아 더 많은 영양분을 만들어낸 거래요. 미래에 화성에 갈 때 우주에서 직접 채소를 키워 먹을 수 있을 것 같아요.</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 3분</span>
+          <a href="https://news.example.com/5" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+      <article class="news-card" data-category="날씨">
+        <div class="news-category" style="background: #00C9FF">
+          <span class="category-icon">🌤️</span>
+          <span class="category-name">날씨</span>
+        </div>
+        <h2 class="news-title">🌤️ 이번 주말 날씨, 전국이 맑고 따뜻해요!</h2>
+        <p class="news-summary">이번 주말은 전국이 맑고 따뜻한 날씨가 예상돼요. 서울 기온은 최고 8도까지 올라가고, 부산은 12도까지 올라간대요. 야외 활동하기 딱 좋은 날씨네요! 다만 일교차가 크니까 겉옷은 꼭 챙기세요. 감기 걸리지 않게 조심해요!</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 2분</span>
+          <a href="https://news.example.com/6" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+      <article class="news-card" data-category="경제">
+        <div class="news-category" style="background: #FFC75F">
+          <span class="category-icon">📊</span>
+          <span class="category-name">경제</span>
+        </div>
+        <h2 class="news-title">📊 물가 상승률 둔화, 라면 가격은 안정세</h2>
+        <p class="news-summary">올해 물가 상승률이 조금씩 낮아지고 있어요. 특히 라면 가격이 예전보다 많이 오르지 않았대요. 경제 전문가들은 "내년에는 물가가 더 안정될 것"이라고 예상해요. 우리 주머니 사정이 조금은 나아질 수도 있겠네요!</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 2분</span>
+          <a href="https://news.example.com/7" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+      <article class="news-card" data-category="세계경제">
+        <div class="news-category" style="background: #F9F871">
+          <span class="category-icon">🌍</span>
+          <span class="category-name">세계경제</span>
+        </div>
+        <h2 class="news-title">🌍 미국, 전기차 충전소 2배 늘린다</h2>
+        <p class="news-summary">미국 정부가 전기차 충전소를 지금보다 2배 늘리기로 했어요. 전기차를 타는 사람들이 걱정 없이 여행할 수 있게 하려는 거죠. 우리나라도 전기차 충전소가 많이 늘어나고 있어요. 미래에는 전기차가 일반 자동차보다 더 많아질지도 몰라요!</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 2분</span>
+          <a href="https://news.example.com/8" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+      <article class="news-card" data-category="부동산">
+        <div class="news-category" style="background: #C34A36">
+          <span class="category-icon">🏠</span>
+          <span class="category-name">부동산</span>
+        </div>
+        <h2 class="news-title">🏠 서울 아파트 값, 1년 만에 처음으로 하락</h2>
+        <p class="news-summary">서울의 아파트 가격이 1년 만에 처음으로 내려갔어요. 예전에는 계속 올랐는데 이제는 조금씩 떨어지고 있대요. 이게 무슨 의미냐면, 집을 사려는 사람들에게는 좋은 소식이고, 집을 팔려는 사람들에게는 조금 아쉬운 소식이에요. 부동산 시장이 안정되고 있다는 신호래요.</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 3분</span>
+          <a href="https://news.example.com/9" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+      <article class="news-card" data-category="스포츠">
+        <div class="news-category" style="background: #FF8066">
+          <span class="category-icon">⚽</span>
+          <span class="category-name">스포츠</span>
+        </div>
+        <h2 class="news-title">⚽ 손흥민, 토트넘과 재계약! 2028년까지 함께</h2>
+        <p class="news-summary">손흥민 선수가 토트넘과 재계약을 했어요! 2028년까지 토트넘 유니폼을 입게 됐대요. 손흥민은 "토트넘은 제 두 번째 집 같아요. 앞으로도 최선을 다하겠습니다"라고 말했어요. 대한민국 축구 팬들에게 정말 기쁜 소식이네요!</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 2분</span>
+          <a href="https://news.example.com/10" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+      <article class="news-card" data-category="게임">
+        <div class="news-category" style="background: #9B59B6">
+          <span class="category-icon">🎮</span>
+          <span class="category-name">게임</span>
+        </div>
+        <h2 class="news-title">🎮 닌텐도, 새로운 스위치 후속작 힌트 공개</h2>
+        <p class="news-summary">닌텐도가 스위치의 후속 게임기에 대한 힌트를 살짝 공개했어요. 더 좋은 화질과 더 빠른 속도를 가질 거래요. 정확한 출시일은 아직 비밀이지만, 내년 중에는 발표될 것 같아요. 젤다와 마리오를 더 멋진 그래픽으로 즐길 수 있을 것 같네요!</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 2분</span>
+          <a href="https://news.example.com/11" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+      <article class="news-card" data-category="테크">
+        <div class="news-category" style="background: #3498DB">
+          <span class="category-icon">💻</span>
+          <span class="category-name">테크</span>
+        </div>
+        <h2 class="news-title">💻 AI가 코딩을 도와줘요! 프로그래밍 배우기가 더 쉬워졌다</h2>
+        <p class="news-summary">요즘 AI가 코딩을 도와주는 도구들이 많이 나오고 있어요. 어려운 코드를 쉽게 설명해주고, 버그도 찾아준대요. 프로그래밍을 배우고 싶은 친구들에게는 정말 좋은 시대가 왔네요. AI를 선생님 삼아 코딩을 배워보는 건 어떨까요?</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 2분</span>
+          <a href="https://news.example.com/12" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+      <article class="news-card" data-category="지식">
+        <div class="news-category" style="background: #2ECC71">
+          <span class="category-icon">📚</span>
+          <span class="category-name">지식</span>
+        </div>
+        <h2 class="news-title">📚 독서가 수학 실력을 높인다? 연구 결과 발표</h2>
+        <p class="news-summary">책을 많이 읽는 학생일수록 수학 실력도 좋다는 연구 결과가 나왔어요. 독서를 하면 논리적 사고력이 좋아지고, 이게 수학 문제를 푸는 데도 도움이 된대요. 수학이 어렵다면 책부터 읽어보는 건 어떨까요? 재미있는 소설부터 시작해보세요!</p>
+        <div class="news-meta">
+          <span class="reading-time">📖 3분</span>
+          <a href="https://news.example.com/13" target="_blank" class="read-more">원문 보기 →</a>
+        </div>
+      </article>
+    
+    </div>
+    
+    <footer>
+      <p><strong>플레이도경</strong> - 13세를 위한 경제 신문</p>
+      <p>매일 아침 9시, 세상의 중요한 소식을 쉽고 재미있게 전해드립니다</p>
+      <div class="footer-links">
+        <a href="https://github.com" target="_blank">GitHub</a>
+        <a href="/cdn-cgi/l/email-protection#a5c3c0c0c1c7c4c6cee5d5c9c4dcc1cacedcd0cbc28bc6cac8">피드백 보내기</a>
+      </div>
+      <p style="margin-top: 15px; font-size: 0.9rem;">
+        마지막 업데이트: 2025. 12. 30. 오전 12:00:00
+      </p>
+    </footer>
+  </div>
+  
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    // 필터 기능
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const newsCards = document.querySelectorAll('.news-card');
+    
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const filter = btn.dataset.filter;
+        
+        // 버튼 활성화 상태 변경
+        filterButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // 카드 필터링
+        newsCards.forEach(card => {
+          if (filter === 'all' || card.dataset.category === filter) {
+            card.style.display = 'flex';
+            card.style.animation = 'fadeIn 0.5s ease';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    });
+    
+    // 카드 클릭 시 원문으로 이동
+    newsCards.forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.classList.contains('read-more')) return;
+        const link = card.querySelector('.read-more');
+        if (link) window.open(link.href, '_blank');
+      });
+    });
+    
+    // 페이드인 애니메이션
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+      
